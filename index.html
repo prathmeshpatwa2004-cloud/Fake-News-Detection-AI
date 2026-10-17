@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>TruthAI - Fake News Detector</title>
+
+  <meta name="theme-color" content="#123b70">
+  <meta name="description"
+        content="AI-assisted news analysis in Marathi, Hindi and English">
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+
+<body>
+  <header class="header">
+    <div class="logo">📰 TruthAI</div>
+    <p>AI-Powered News Analysis</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h1>Check Your News</h1>
+
+      <p class="subtitle">
+        Analyze news articles in three languages.
+      </p>
+
+      <label for="language">Select language</label>
+
+      <select id="language">
+        <option value="en">English</option>
+        <option value="hi">हिंदी</option>
+        <option value="mr">मराठी</option>
+      </select>
+
+      <label for="news">Paste your news article</label>
+
+      <textarea
+        id="news"
+        placeholder="Paste a complete news article here..."
+        minlength="20"
+        maxlength="10000"
+      ></textarea>
+
+      <div class="counter">
+        <span id="charCount">0</span>/10000 characters
+      </div>
+
+      <button id="checkButton" type="button">
+        🤖 Analyze News
+      </button>
+
+      <div id="loading" hidden>
+        Analyzing news... Please wait.
+      </div>
+
+      <section id="result" class="result" hidden
+               aria-live="polite">
+      </section>
+
+      <p class="disclaimer">
+        ⚠️ AI predictions are not proof of truth or falsity.
+        Verify important claims using reliable sources.
+      </p>
+    </section>
+
+    <section class="card tips">
+      <h2>How to verify news</h2>
+      <ul>
+        <li>Check the original publisher.</li>
+        <li>Look for the publication date.</li>
+        <li>Compare with trusted news organizations.</li>
+        <li>Find official statements or primary sources.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    TruthAI · AI-assisted news analysis
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+  </html>

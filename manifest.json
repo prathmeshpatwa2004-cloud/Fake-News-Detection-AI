@@ -1,0 +1,10 @@
+{
+  "name": "TruthAI Fake News Detector",
+  "short_name": "TruthAI",
+  "description": "AI-assisted news analysis",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#edf2f8",
+  "theme_color": "#123b70",
+  "icons": []
+}

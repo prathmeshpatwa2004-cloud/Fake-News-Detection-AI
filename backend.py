@@ -1,5 +1,4 @@
 import os
-
 import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,19 +6,14 @@ from pydantic import BaseModel, Field
 
 app = FastAPI(title="TruthAI API")
 
-# Configure these environment variables on your backend host.
 HF_TOKEN = os.getenv("HF_TOKEN", "")
 MODEL_ID = os.getenv("MODEL_ID", "")
-
-# Replace with your deployed GitHub Pages origin.
-# Example: https://yourusername.github.io
 ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[ALLOWED_ORIGIN] if ALLOWED_ORIGIN else [],
-    allow_credentials=False,
-    allow_methods=["POST", "GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
 
@@ -31,10 +25,7 @@ class NewsRequest(BaseModel):
 
 @app.get("/")
 def home():
-    return {
-        "app": "TruthAI",
-        "status": "online"
-    }
+    return {"app": "TruthAI", "status": "online"}
 
 
 @app.post("/analyze")
@@ -42,52 +33,38 @@ def analyze_news(request: NewsRequest):
     if not HF_TOKEN or not MODEL_ID:
         raise HTTPException(
             status_code=503,
-            detail="AI model is not configured on the server."
+            detail="AI model is not configured yet."
         )
 
-    api_url = (
+    url = (
         "https://router.huggingface.co/hf-inference/models/"
         + MODEL_ID
     )
 
-    headers = {
-        "Authorization": f"Bearer {HF_TOKEN}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "inputs": request.text
-    }
-
     try:
         response = requests.post(
-            api_url,
-            headers=headers,
-            json=payload,
-            timeout=60
+            url,
+            headers={
+                "Authorization": f"Bearer {HF_TOKEN}",
+                "Content-Type": "application/json",
+            },
+            json={"inputs": request.text},
+            timeout=60,
         )
+        response.raise_for_status()
+        predictions = response.json()
+
     except requests.RequestException:
         raise HTTPException(
             status_code=502,
-            detail="Could not connect to the AI provider."
+            detail="AI provider request failed."
         )
-
-    if response.status_code != 200:
-        raise HTTPException(
-            status_code=502,
-            detail="The AI provider could not analyze this article."
-        )
-
-    try:
-        predictions = response.json()
     except ValueError:
         raise HTTPException(
             status_code=502,
-            detail="Invalid response from the AI provider."
+            detail="Invalid AI provider response."
         )
 
-    # Hugging Face classification responses commonly contain
-    # label/score objects. Normalize common response shapes.
     if (
         isinstance(predictions, list)
         and predictions
@@ -102,40 +79,41 @@ def analyze_news(request: NewsRequest):
     ):
         raise HTTPException(
             status_code=502,
-            detail="The model returned an unexpected result."
+            detail="Unexpected model output."
         )
 
-    best = max(
-        predictions,
-        key=lambda item: float(item.get("score", 0))
-    )
+    try:
+        best = max(
+            predictions,
+            key=lambda item: float(item.get("score", 0))
+        )
+        raw_label = str(best.get("label", "unknown"))
+        confidence = float(best.get("score", 0))
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=502,
+            detail="Invalid model prediction."
+        )
 
-    raw_label = str(best.get("label", "unknown"))
-    confidence = float(best.get("score", 0))
+    label_normalized = raw_label.lower().replace("_", " ")
 
-    # Do not invent truth/falsity labels for unknown model classes.
-    normalized = raw_label.lower().replace("_", " ").replace("-", " ")
-
-    fake_labels = {"fake", "false", "misinformation"}
-    real_labels = {"real", "true", "reliable", "genuine"}
-
-    if normalized in fake_labels:
+    if label_normalized in {"fake", "false", "misinformation"}:
         label = "Potential misinformation"
         explanation = (
-            "The configured model classified this text as fake-related. "
-            "Verify the claims using trusted sources."
+            "The model classified this article as fake-related. "
+            "Verify its claims using reliable sources."
         )
-    elif normalized in real_labels:
+    elif label_normalized in {"real", "true", "reliable", "genuine"}:
         label = "Model predicts likely authentic"
         explanation = (
-            "The configured model classified this text as real-related. "
-            "This does not independently confirm its accuracy."
+            "The model classified this article as real-related. "
+            "This does not independently verify the news."
         )
     else:
         label = "Uncertain classification"
         explanation = (
-            "The model returned a label that is not mapped to "
-            "a validated fake-news category."
+            "The model returned a label whose meaning has not "
+            "been configured. No truth verdict can be given."
         )
 
     return {
@@ -144,5 +122,5 @@ def analyze_news(request: NewsRequest):
         "confidence": confidence,
         "model_label": raw_label,
         "language": request.language,
-        "verified": False
-  }
+        "verified": False,
+    }
